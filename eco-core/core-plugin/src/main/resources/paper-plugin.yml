@@ -1,26 +1,21 @@
 name: ${pluginName}
 version: ${version}
 main: com.willfp.ecoitems.EcoItemsPlugin
-api-version: 1.17
-authors: [ Auxilor ]
-website: willfp.com
-depend:
-  - eco
-softdepend:
-  - libreforge
-loadbefore:
-  - EcoArmor
-  - Talismans
-  - EcoBosses
-  - Reforges
-  - EcoCrates
-  - StatTrackers
-  - EcoPets
+api-version: 1.19
 
-commands:
-  ecoitems:
-    description: Base Command
-    permission: ecoitems.command.ecoitems
+dependencies:
+  - name: eco
+    required: true
+    bootstrap: false
+
+  - name: libreforge
+    required: false
+    bootstrap: false
+
+load-after:
+  - name: eco
+    bootstrap: false
+
 
 permissions:
   ecoitems.*:
