@@ -2,14 +2,19 @@ package com.willfp.ecoitems
 
 import com.willfp.eco.core.command.impl.PluginCommand
 import com.willfp.eco.core.display.DisplayModule
+import com.willfp.eco.core.items.Items
 import com.willfp.ecoitems.commands.CommandEcoItems
 import com.willfp.ecoitems.display.ItemsDisplay
+import com.willfp.ecoitems.display.RarityDisplay
+import com.willfp.ecoitems.items.EcoItemFinder
 import com.willfp.ecoitems.items.EcoItems
 import com.willfp.ecoitems.items.EcoItemsRecipes
 import com.willfp.ecoitems.items.ItemAttributeListener
 import com.willfp.ecoitems.items.ItemListener
-import com.willfp.ecoitems.items.ItemUtils
 import com.willfp.ecoitems.libreforge.ConditionHasEcoItem
+import com.willfp.ecoitems.rarity.ArgParserRarity
+import com.willfp.ecoitems.rarity.Rarities
+import com.willfp.ecoitems.items.EcoItemTag
 import com.willfp.ecoitems.util.DiscoverRecipeListener
 import com.willfp.libreforge.conditions.Conditions
 import com.willfp.libreforge.loader.LibreforgePlugin
@@ -17,22 +22,26 @@ import com.willfp.libreforge.loader.configs.ConfigCategory
 import com.willfp.libreforge.registerHolderProvider
 import org.bukkit.event.Listener
 
+internal lateinit var plugin: EcoItemsPlugin
+    private set
+
 class EcoItemsPlugin : LibreforgePlugin() {
-    /**
-     * Internal constructor called by bukkit on plugin load.
-     */
     init {
-        instance = this
+        plugin = this
     }
 
     override fun handleEnable() {
+        Items.registerArgParser(ArgParserRarity)
+        Items.registerTag(EcoItemTag(this))
+
         Conditions.register(ConditionHasEcoItem)
 
-        registerHolderProvider { ItemUtils.getEcoItemsOnPlayer(it) }
+        registerHolderProvider(EcoItemFinder.toHolderProvider())
     }
 
     override fun loadConfigCategories(): List<ConfigCategory> {
         return listOf(
+            Rarities,
             EcoItems,
             EcoItemsRecipes
         )
@@ -52,15 +61,10 @@ class EcoItemsPlugin : LibreforgePlugin() {
         )
     }
 
-    override fun createDisplayModule(): DisplayModule {
-        return ItemsDisplay(this)
-    }
-
-    companion object {
-        /**
-         * Instance of EcoItems.
-         */
-        @JvmStatic
-        lateinit var instance: EcoItemsPlugin
+    override fun loadDisplayModules(): List<DisplayModule> {
+        return listOf(
+            ItemsDisplay(this),
+            RarityDisplay(this)
+        )
     }
 }

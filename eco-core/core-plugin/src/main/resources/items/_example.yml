@@ -26,15 +26,19 @@ item:
     - ""
   recipe-give-amount: 1 # Optional, set the amount of items to give in the recipe
 
-  # The actual item durability isn't set (because it can't be changed), but instead
-  # this scales how quickly the item wears to act as if it had this durability.
-  # For example, let's say the actual durability is 350, but you set this to 700,
-  # it will wear at half the normal rate.
+# The slot the item has to be in to activate its effects.
+# The options for slot are mainhand, offhand, hands, helmet, chestplate,
+# leggings, boots, armor, any, a number from 0-40 (to specify an exact slot),
+# or a list of slots like "9, 10, 11, mainhand"
+# Use to choose weather this is a weapon, tool, armor piece, charm, etc.
+# If you don't specify this, it will default to mainhand.
+slot: mainhand
 
-  effective-durability: 1024 # Optional, set the durability
+base-damage: 12 # (Optional) The item base damage
+base-attack-speed: 1.5 # (Optional) The item base attack speed
 
-base-damage: 12 # The item base damage
-base-attack-speed: 1.5 # The item base attack speed
+# (Optional) The rarity of the item
+rarity: rare
 
 # The effects of the item (i.e. the functionality)
 # See here: https://plugins.auxilor.io/effects/configuring-an-effect

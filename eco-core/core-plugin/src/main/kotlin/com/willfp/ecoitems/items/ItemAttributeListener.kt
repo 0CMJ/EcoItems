@@ -1,7 +1,11 @@
 package com.willfp.ecoitems.items
 
 import com.willfp.eco.core.EcoPlugin
+import com.willfp.ecoitems.compat.ModernCompatibilityProxy
+import com.willfp.ecoitems.compat.ifModern
+import com.willfp.libreforge.toDispatcher
 import org.bukkit.attribute.Attribute
+import org.bukkit.attribute.AttributeInstance
 import org.bukkit.attribute.AttributeModifier
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
@@ -21,67 +25,89 @@ class ItemAttributeListener(private val plugin: EcoPlugin) : Listener {
     }
 
     private fun apply(player: Player) {
-        val items = ItemUtils.getEcoItemsOnPlayer(player)
-            .map { it.holder as EcoItem }
+        val items = EcoItemFinder.toHolderProvider().provide(player.toDispatcher()).map { it.holder }
 
         val damageInst = player.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE) ?: return
         val speedInst = player.getAttribute(Attribute.GENERIC_ATTACK_SPEED) ?: return
 
-        // Legacy (Pre-3.123.2)
-        damageInst.removeModifier(
-            AttributeModifier(
-                UUID.nameUUIDFromBytes("ecoitems_ad".toByteArray()),
-                "EcoItems Damage",
-                1.0, // Irrelevant
-                AttributeModifier.Operation.ADD_NUMBER
-            )
-        )
-        speedInst.removeModifier(
-            AttributeModifier(
-                UUID.nameUUIDFromBytes("ecoitems_as".toByteArray()),
-                "EcoItems Speed",
-                1.0, // Irrelevant
-                AttributeModifier.Operation.ADD_NUMBER
-            )
-        )
+        damageInst.modifiers.filter { it.isFromEcoItems }.forEach {
+            damageInst.removeModifier(it)
+        }
 
-        for (offset in 0..1) {
-            damageInst.removeModifier(
-                AttributeModifier(
-                    UUID.nameUUIDFromBytes("ecoitems_ad_$offset".toByteArray()),
-                    "EcoItems Damage $offset",
-                    1.0, // Irrelevant
-                    AttributeModifier.Operation.ADD_NUMBER
-                )
-            )
-            speedInst.removeModifier(
-                AttributeModifier(
-                    UUID.nameUUIDFromBytes("ecoitems_as_$offset".toByteArray()),
-                    "EcoItems Speed $offset",
-                    1.0, // Irrelevant
-                    AttributeModifier.Operation.ADD_NUMBER
-                )
-            )
+        speedInst.modifiers.filter { it.isFromEcoItems }.forEach {
+            speedInst.removeModifier(it)
         }
 
         for ((offset, item) in items.withIndex()) {
-            damageInst.addModifier(
-                AttributeModifier(
-                    UUID.nameUUIDFromBytes("ecoitems_ad_$offset".toByteArray()),
-                    "EcoItems Damage $offset",
+            if (item.baseDamage != null) {
+                damageInst.addCompatibleModifier(
+                    "Damage",
                     item.baseDamage - player.inventory.itemInMainHand.type.baseDamage,
-                    AttributeModifier.Operation.ADD_NUMBER
+                    offset
                 )
-            )
+            }
 
-            speedInst.addModifier(
-                AttributeModifier(
-                    UUID.nameUUIDFromBytes("ecoitems_as_$offset".toByteArray()),
-                    "EcoItems Speed $offset",
+            if (item.baseAttackSpeed != null) {
+                speedInst.addCompatibleModifier(
+                    "Speed",
                     item.baseAttackSpeed - player.inventory.itemInMainHand.type.baseAttackSpeed,
+                    offset
+                )
+            }
+        }
+    }
+
+    private val AttributeModifier.isFromEcoItems: Boolean
+        get() {
+            if (this.name.startsWith("EcoItems Damage", true)
+                || this.name.startsWith("EcoItems Speed", true)
+            ) {
+                return true
+            }
+
+            var isFromEcoItems = false
+
+            ifModern {
+                useProxy<ModifierHelper> {
+                    isFromEcoItems = isFromEcoItems(this@isFromEcoItems)
+                }
+            }
+
+            return isFromEcoItems
+        }
+
+    private fun AttributeInstance.addCompatibleModifier(
+        attributeType: String,
+        amount: Double,
+        offset: Int
+    ) {
+        ifModern {
+            useProxy<ModifierHelper> {
+                addModifier(
+                    createModifier(plugin, attributeType, amount, offset)
+                )
+            }
+        }.otherwise {
+            addModifier(
+                AttributeModifier(
+                    UUID.nameUUIDFromBytes("ecoitems_$offset".toByteArray()),
+                    "EcoItems $attributeType $offset",
+                    amount,
                     AttributeModifier.Operation.ADD_NUMBER
                 )
             )
         }
     }
+}
+
+@ModernCompatibilityProxy("ModifierHelperImpl")
+interface ModifierHelper {
+    fun createModifier(
+        plugin: EcoPlugin,
+        attributeType: String,
+        amount: Double,
+        offset: Int
+    ): AttributeModifier
+
+    fun isFromEcoItems(modifier: AttributeModifier): Boolean
 }
